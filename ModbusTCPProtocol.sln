@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModbusTCPProtocol.ConsoleApp", "ModbusTCPProtocol.ConsoleApp\ModbusTCPProtocol.ConsoleApp.csproj", "{10CB1875-2303-44F8-8444-087A38EDEEBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModbusTCProtocol.Implementation", "ModbusTCProtocol.Implementation\ModbusTCProtocol.Implementation.csproj", "{C2BE06AA-59DB-4D75-9ADD-E87D651C168F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{10CB1875-2303-44F8-8444-087A38EDEEBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10CB1875-2303-44F8-8444-087A38EDEEBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10CB1875-2303-44F8-8444-087A38EDEEBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10CB1875-2303-44F8-8444-087A38EDEEBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2BE06AA-59DB-4D75-9ADD-E87D651C168F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2BE06AA-59DB-4D75-9ADD-E87D651C168F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2BE06AA-59DB-4D75-9ADD-E87D651C168F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2BE06AA-59DB-4D75-9ADD-E87D651C168F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {30394DB7-96E7-46E2-ABE3-16B8B242B2DB}
+	EndGlobalSection
+EndGlobal
