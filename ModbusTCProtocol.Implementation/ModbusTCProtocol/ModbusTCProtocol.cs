@@ -1,78 +1,102 @@
-﻿using ModbusTCP.Implementacion.dataSourceCommunication;
-using Domain.Core.Concrete;
+﻿using Domain.Core.Concrete;
+using ModbusTCP.Implementacion.dataSourceCommunication;
 using NModbus;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
-using System.Xml.Linq;
-using NModbus.Data;
 
 namespace ModbusTCP.Implementacion.ModbusTCProtocol
 {
+    //TODO: Cambiar a ModbusTCPCommunicationSession
     public class ModbusTCProtocol : IDataSourceCommunicationSession
     {
-        public TcpClient tcpclient = new TcpClient();
+        public TcpClient _tcpclient;
 
-        public IModbusMaster modbusMaster;
+        public IModbusMaster _modbusMaster;
 
-        public IPEndPoint ipEndpoint;
 
-        private byte slaveAddress;
+        public byte SlaveAddress;
+        /// <summary>
+        /// Identificador de la fuente de datos a la cual pertenece la sesión.
+        /// </summary>
+        public Guid DataSourceId { get; }
 
-        public Guid DataSourceId => throw new NotImplementedException();
+        public Guid SessionId { get; }
 
-        public Guid SessionId => throw new NotImplementedException();
+        public ModbusTCProtocol(byte slaveAddress, Guid dataSourceId)
+        {
+            SlaveAddress = slaveAddress;
+            _tcpclient = new TcpClient();
+            //TODO: Probar si el _modbusMaster se puede crear en el constructor
+            //y que en la función de conectar solo sea  _tcpclient.Connect(ipEndpoint);
+            DataSourceId= dataSourceId;
+            SessionId = Guid.NewGuid();
+        }
+
 
         public void AddSuscription(Node node, object clientHandle, valueChanged callback, out object serverHandle)
         {
             throw new NotImplementedException();
         }
 
-        public Domain.Core.Concrete.Result Browse()
+        public Result Browse()
         {
             throw new NotImplementedException();
         }
 
-        public Domain.Core.Concrete.Result Connect(string endpoint)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoint">Dirección del esclavo con el que se desea conectar.
+        /// Se asume que la dirección es correcta. </param>
+        /// <returns></returns>
+        public Result Connect(string endpoint)
         {
-            ipEndpoint = IPEndPoint.Parse(endpoint);
+            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            try
+            {
+                _tcpclient.Connect(ipEndpoint);
 
-            tcpclient.Connect(ipEndpoint);
-            
-            var Factory = new ModbusFactory();
+                var Factory = new ModbusFactory();
 
-            modbusMaster = Factory.CreateMaster(tcpclient);
+                _modbusMaster = Factory.CreateMaster(_tcpclient);
 
-            return Result.Success();
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
         }
 
-        public Domain.Core.Concrete.Result Disconnect()
+        public Result Disconnect()
         {
-            tcpclient.Close();
+            _tcpclient.Close();
 
             return Result.Success();
         }
 
         public void ReadValue(Node node, out DataValue dataValue)
         {
-            ModbusNode modbusNode = (ModbusNode)node;
+            ModbusNode modbusNode = (ModbusNode)node; 
 
             switch (modbusNode.RegisterType)
             {
+                //TODO> Verificar si el numberOfPoints tiene que ser fijo en 1 o si ahí se debe utilizar modbusNode.RegisterAmount
+
                 case ModbusRegisterType.Coils:
-                    bool[] coils = modbusMaster.ReadCoils(slaveAddress, modbusNode.Start, 1);
+                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
                     dataValue = new DataValue(coils);
                     break;
                 case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = modbusMaster.ReadInputRegisters(slaveAddress, modbusNode.Start, 1);
+                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = modbusMaster.ReadCoils(slaveAddress, modbusNode.Start, 1);
+                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = modbusMaster.ReadInputRegisters(slaveAddress, modbusNode.Start, 1);
+                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
@@ -81,7 +105,7 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
             }
         }
 
-        public void ReadValues(List<Node> nodes, out List<(Node, DataValue)>? dataValue)
+          public void ReadValues(List<Node> nodes, out List<(Node, DataValue)>? dataValue)
         {
             List<ModbusNode> modbusNodes = new List<ModbusNode>();
 
@@ -98,22 +122,22 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
                 switch (modbusNode.RegisterType)
                 {
                     case ModbusRegisterType.Coils:
-                        bool[] coils = modbusMaster.ReadCoils(slaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                        bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                         dataValues.Add((modbusNode, new DataValue(coils)));
                         dataValue = dataValues;
                         break;
                     case ModbusRegisterType.InputRegister:
-                        ushort[] inputRegisters = modbusMaster.ReadInputRegisters(slaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                        ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                         dataValues.Add((modbusNode, new DataValue(inputRegisters)));
                         dataValue = dataValues;
                         break;
                     case ModbusRegisterType.DiscreteInputs:
-                        bool[] discreteInputs = modbusMaster.ReadCoils(slaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                        bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                         dataValues.Add((modbusNode, new DataValue(discreteInputs)));
                         dataValue = dataValues;
                         break;
                     case ModbusRegisterType.HoldingRegister:
-                        ushort[] holdingRegister = modbusMaster.ReadInputRegisters(slaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                        ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                         dataValues.Add((modbusNode, new DataValue(holdingRegister)));
                         dataValue = dataValues;
                         break;
@@ -135,12 +159,12 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
             {
                 case ModbusRegisterType.Coils:
                     bool value = (bool)dataValue.Value;
-                    modbusMaster.WriteSingleCoil(slaveAddress, modbusNode.Start, value);
+                    _modbusMaster.WriteSingleCoil(SlaveAddress, modbusNode.Start, value);
                     results = Result.Success();
                     break;
                 case ModbusRegisterType.HoldingRegister:
                     ushort uvalue = (ushort)dataValue.Value;
-                    modbusMaster.WriteSingleRegister(slaveAddress, modbusNode.Start, uvalue);
+                    _modbusMaster.WriteSingleRegister(SlaveAddress, modbusNode.Start, uvalue);
                     results = Result.Success();
                     break;
                 default:
@@ -148,6 +172,7 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
                     break;
             }
         }
+
 
         /*En este caso se escribe múltiples valores en dependencia del tipo de registro,
          se escribe en direcciones continuas, en dependencia del tamaño del arreglo,
@@ -184,18 +209,18 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
                 }
             }
 
-           
+
 
             foreach (ModbusNode modbusNode in modbusNodes)
             {
                 switch (modbusNode.RegisterType)
                 {
                     case ModbusRegisterType.Coils:
-                        modbusMaster.WriteMultipleCoils(slaveAddress, modbusNode.Start, boolValues);
+                        _modbusMaster.WriteMultipleCoils(SlaveAddress, modbusNode.Start, boolValues);
                         results = Result.Success();
                         break;
                     case ModbusRegisterType.HoldingRegister:
-                        modbusMaster.WriteMultipleRegisters(slaveAddress, modbusNode.Start, ushortValues);
+                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNode.Start, ushortValues);
                         results = Result.Success();
                         break;
                     default:
@@ -206,13 +231,10 @@ namespace ModbusTCP.Implementacion.ModbusTCProtocol
             results = Result.Failure("Error");
         }
 
-        public ModbusTCProtocol(byte slaveAddress)
-        {
-            this.slaveAddress = slaveAddress;
-        }
 
 
-        //TODO: Idear algo como esto
+
+        //TODO:No va a ser posible hacerlo, al final todos son el mismo tipo de datos, lo que cambia es su valor.
         /*
         public override void Write(ModbusRegisterType modbusRegisterType = ModbusRegisterType.HoldingRegister)
         {
