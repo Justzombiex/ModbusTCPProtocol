@@ -1,6 +1,6 @@
 ﻿using Domain.Core.Concrete;
 using ModbusTCP.Implementacion.dataSourceCommunication;
-using ModbusTCP.Implementacion.ModbusTCProtocol;
+using ModbusTCP.Implementacion.ModbusTCPCommunicationSession;
 
 namespace ModbusTCPProtocol.ConsoleApp
 {
@@ -10,31 +10,56 @@ namespace ModbusTCPProtocol.ConsoleApp
         {
             bool salir = false;
 
-            string endpoint = "192.168.36.85:502";
-            ModbusTCProtocol modbusTCProtocol = new ModbusTCProtocol(1);
+            string endpoint = "192.168.133.85:502";
+            ModbusTCPCommunicationSession modbusTCPCommunicationSession = new ModbusTCPCommunicationSession(1, new Guid());
 
-            modbusTCProtocol.Connect(endpoint);
-            
+            modbusTCPCommunicationSession.Connect(endpoint);
+
             Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
             Result<ModbusNode> result2 = ModbusNode.Create(0, 4, ModbusRegisterType.Coils);
             Result<ModbusNode> result3 = ModbusNode.Create(0, 4, ModbusRegisterType.DiscreteInputs);
             Result<ModbusNode> result4 = ModbusNode.Create(0, 4, ModbusRegisterType.InputRegister);
+
+            Result<ModbusMatrixNode> result5 = ModbusMatrixNode.Create(0, 3, ModbusRegisterType.HoldingRegister, 1, 1);
+            Result<ModbusMatrixNode> result6 = ModbusMatrixNode.Create(0, 3, ModbusRegisterType.Coils, 1, 1);
+            Result<ModbusMatrixNode> result7 = ModbusMatrixNode.Create(0, 3, ModbusRegisterType.DiscreteInputs, 1, 1);
+            Result<ModbusMatrixNode> result8 = ModbusMatrixNode.Create(0, 3, ModbusRegisterType.InputRegister, 1, 1);
 
             ModbusNode modbusNodeHoldingRegister = result1.Value;
             ModbusNode modbusNodeCoil = result2.Value;
             ModbusNode modbusNodeDiscreteInputsRegister = result3.Value;
             ModbusNode modbusNodeInputRegister = result4.Value;
 
+            ModbusMatrixNode modbusMatrixNodeHoldingRegister = result5.Value;   
+            ModbusMatrixNode modbusMatrixNodeCoil = result6.Value;
+            ModbusMatrixNode modbusMatrixNodeDiscreteInputsRegister = result7.Value;
+            ModbusMatrixNode modbusMatrixNodeInputRegister = result8.Value;
 
-            ushort[] uWriteValues = [3, 3, 2];
-            bool[] boolWriteValues = [false, true, true];
+            string[] uWriteValues = ["3", "24", "25"];
+            bool[] boolWriteValues =
+                [true, false, true, false, true, false, true, false,
+            true, false, true, false, true, false, true, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false];
 
             bool boolWriteValue = true;
             ushort uWriteValue = 123;
 
             ushort[] readHoldingRegister = null;
             bool[] readCoil = null;
-            bool[] readInputRegister = null ;
+            bool[] readInputRegister = null;
             ushort[] readDiscreteInpute = null;
 
             DataValue dataUwriteValue = new DataValue(uWriteValue);
@@ -49,10 +74,12 @@ namespace ModbusTCPProtocol.ConsoleApp
 
 
 
-            List<(Node, DataValue)> writeValues = new List<(Node, DataValue)> {(modbusNodeHoldingRegister, dataUwriteValues),(modbusNodeCoil, dataBoolWriteValues)};
-            List<(Node, DataValue)> readValues = new List<(Node, DataValue)> {(modbusNodeHoldingRegister, dataReadHoldingRegister), (modbusNodeCoil, dataReadCoil), (modbusNodeDiscreteInputsRegister, dataReadInputRegister), (modbusNodeInputRegister, dataReadInputRegister)};
-            List<Node> nodes = new List<Node> {modbusNodeHoldingRegister, modbusNodeCoil, modbusNodeDiscreteInputsRegister, modbusNodeInputRegister };
+            List<(ModbusMatrixNode, DataValue)> writeValues = new List<(ModbusMatrixNode, DataValue)> { (modbusMatrixNodeHoldingRegister, dataUwriteValues), (modbusMatrixNodeCoil, dataBoolWriteValues) };
+            List<(ModbusMatrixNode, DataValue)> readValues = new List<(ModbusMatrixNode, DataValue)> { (modbusMatrixNodeHoldingRegister, dataReadHoldingRegister), (modbusMatrixNodeCoil, dataReadCoil), (modbusMatrixNodeDiscreteInputsRegister, dataReadInputRegister), (modbusMatrixNodeInputRegister, dataReadInputRegister) };
 
+            Result<ModbusMatrixNode> modbusMatrixNodeResult = ModbusMatrixNode.Create(0, 1, ModbusRegisterType.Coils, 2, 2);
+
+            ModbusMatrixNode modbusMatrixNode = modbusMatrixNodeResult.Value;
 
             Result result = null;
 
@@ -78,7 +105,7 @@ namespace ModbusTCPProtocol.ConsoleApp
                     case "W":
                         salir = true;
                         Console.WriteLine("Gracias por usar el menú. Adiós!");
-                        modbusTCProtocol.Disconnect();
+                        modbusTCPCommunicationSession.Disconnect();
                         break;
                     default:
                         if (char.IsDigit(entrada[0]))
@@ -111,31 +138,28 @@ namespace ModbusTCPProtocol.ConsoleApp
                 switch (opcionSeleccionada)
                 {
                     case 1:
-                        modbusTCProtocol.WriteValue(modbusNodeCoil, dataBoolWriteValue, out result);
+                        modbusTCPCommunicationSession.WriteValue(modbusNodeCoil, dataBoolWriteValue, out result);
                         break;
                     case 2:
-                        modbusTCProtocol.WriteValue(modbusNodeHoldingRegister, dataUwriteValue, out result);
+                        modbusTCPCommunicationSession.WriteValue(modbusNodeHoldingRegister, dataUwriteValue, out result);
                         break;
                     case 3:
-                        modbusTCProtocol.WriteValues(writeValues, out result);
+                        modbusTCPCommunicationSession.WriteValues(writeValues, out result);
                         break;
                     case 4:
-                        modbusTCProtocol.ReadValue(modbusNodeCoil, out dataReadCoil);
+                        modbusTCPCommunicationSession.ReadValue(modbusNodeCoil, out dataReadCoil);
                         break;
                     case 5:
-                        modbusTCProtocol.ReadValue(modbusNodeHoldingRegister, out dataReadHoldingRegister);
+                        modbusTCPCommunicationSession.ReadValue(modbusNodeHoldingRegister, out dataReadHoldingRegister);
                         break;
                     case 6:
-                        modbusTCProtocol.ReadValue(modbusNodeInputRegister, out dataReadInputRegister);
+                        modbusTCPCommunicationSession.ReadValue(modbusNodeInputRegister, out dataReadInputRegister);
                         break;
                     case 7:
-                        modbusTCProtocol.ReadValue(modbusNodeDiscreteInputsRegister, out dataReadDiscreteInput);
+                        modbusTCPCommunicationSession.ReadValue(modbusNodeDiscreteInputsRegister, out dataReadDiscreteInput);
                         break;
                     case 8:
-                        modbusTCProtocol.ReadValues(nodes, out readValues);
-                        break;
-                    default:
-                        Console.WriteLine("Opción no válida");
+                        modbusTCPCommunicationSession.ReadValues(modbusMatrixNode, out readValues);
                         break;
                 }
             }

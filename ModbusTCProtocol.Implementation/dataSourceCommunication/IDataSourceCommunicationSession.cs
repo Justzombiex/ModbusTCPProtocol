@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Domain.Core.Concrete;
+using Domain.EntityModels;
 
 namespace ModbusTCP.Implementacion.dataSourceCommunication
 {
@@ -40,9 +41,9 @@ namespace ModbusTCP.Implementacion.dataSourceCommunication
         //TODO: Por definir 
         public void WriteValue(Node node, DataValue dataValue, out Result results);
 
-        public void ReadValues(List<Node> nodes, out List<(Node, DataValue)>? dataValue);
+        public void ReadValues(ModbusMatrixNode modbusMatrixNode, out List<(ModbusMatrixNode, DataValue)>? dataValue);
 
         //TODO: Por definir 
-        public void WriteValues(List<(Node, DataValue)> dataValue, out Result results);
+        public void WriteValues(List<(ModbusMatrixNode, DataValue)> dataValue, out Result results);
     }
 }
