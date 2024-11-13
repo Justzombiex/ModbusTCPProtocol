@@ -141,12 +141,12 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             switch (modbusNode.RegisterType)
             {
                 case ModbusRegisterType.Coils:
-                    bool value = (bool)dataValue.Value;
+                    bool value = Convert.ToBoolean(dataValue.Value);
                     _modbusMaster.WriteSingleCoil(SlaveAddress, modbusNode.Start, value);
                     results = Result.Success();
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort uvalue = (ushort)dataValue.Value;
+                    ushort uvalue = Convert.ToUInt16(dataValue.Value);
                     _modbusMaster.WriteSingleRegister(SlaveAddress, modbusNode.Start, uvalue);
                     results = Result.Success();
                     break;
