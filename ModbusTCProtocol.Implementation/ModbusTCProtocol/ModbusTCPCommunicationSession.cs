@@ -52,6 +52,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         public Result Connect(string endpoint)
         {
             var ipEndpoint = IPEndPoint.Parse(endpoint);
+
             try
             {
                 _tcpclient.Connect(ipEndpoint);
@@ -172,13 +173,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                         try
                         {
                             convertedValues = enumerable.Select(item => Convert.ToBoolean(item)).ToArray();
+                            _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])convertedValues);
+
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error de conversión a bool en ID: {dataValue[i].Item1} - {ex.Message}");
+                            results = Result.Failure("Error");
                         }
 
-                        _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])convertedValues);
                     }
                     else if (dataValue[i].Item2.Value is IEnumerable<bool> booleanArray)
                     {
@@ -194,13 +196,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                         try
                         {
                             convertedValues = enumerable.Select(item => Convert.ToUInt16(item)).ToArray();
+                            _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])convertedValues);
+
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error de conversión a ushort en ID: {dataValue[i].Item1} - {ex.Message}");
+                            results = Result.Failure("Error");
                         }
 
-                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])convertedValues);
                     }
                     else if (dataValue[i].Item2.Value is IEnumerable<ushort> ushortArray)
                     {
@@ -209,11 +212,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                 }
                 else
                 {
-                    Console.WriteLine($"ID {dataValue[i].Item1}: Tipo de ModbusRegisterType no reconocido.");
+                    results = Result.Failure("Error");
                 }
             }
 
-            results = Result.Failure("Error");
+            results = Result.Success();
         }
     }
 }
