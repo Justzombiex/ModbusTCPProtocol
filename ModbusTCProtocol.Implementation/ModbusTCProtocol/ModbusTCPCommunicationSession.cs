@@ -52,6 +52,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         public Result Connect(string endpoint)
         {
             var ipEndpoint = IPEndPoint.Parse(endpoint);
+
             try
             {
                 _tcpclient.Connect(ipEndpoint);
