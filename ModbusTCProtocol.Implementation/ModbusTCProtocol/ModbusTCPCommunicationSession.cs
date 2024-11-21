@@ -80,6 +80,27 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             return Result.Success();
         }
 
+        public Result Discovery(string endpoint)
+        {
+            var ipEndpoint = IPEndPoint.Parse(endpoint);
+
+            try
+            {
+                _tcpclient.Connect(ipEndpoint);
+
+                Result result = Result.Success();
+
+                _tcpclient.Close();
+
+                return result;
+
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+        }
+
         public void ReadValue(Node node, out DataValue dataValue)
         {
             ModbusNode modbusNode = (ModbusNode)node;
@@ -238,6 +259,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             results = Result.Success();
         }
+
     }
 }
 
