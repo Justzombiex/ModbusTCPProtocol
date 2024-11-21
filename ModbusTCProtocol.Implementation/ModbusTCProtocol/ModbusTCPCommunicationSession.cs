@@ -67,7 +67,15 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Disconnect()
         {
-            _tcpclient.Close();
+            try
+            {
+                _tcpclient.Close();
+
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
 
             return Result.Success();
         }
@@ -78,22 +86,21 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             switch (modbusNode.RegisterType)
             {
-                //TODO> Verificar si el numberOfPoints tiene que ser fijo en 1 o si ahí se debe utilizar modbusNode.RegisterAmount
 
                 case ModbusRegisterType.Coils:
-                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
+                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(coils);
                     break;
                 case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
+                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
+                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
+                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
@@ -102,39 +109,52 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             }
         }
 
+        //TODO: Aquí creo que se puede devolver simplemente la tupla o no sé si lo que se quiere es devolver conjuntos de datos separados asignados al mismo nodo matriz
+        // En este caso estoy devolviendo
+
         public void ReadValues(ModbusMatrixNode modbusMatrixNode, out List<(ModbusMatrixNode, DataValue)>? dataValue)
         {
             List<(ModbusMatrixNode, DataValue)>? dataValues = new List<(ModbusMatrixNode, DataValue)>();
 
-            switch (modbusMatrixNode.RegisterType)
+            List<object> values = new List<object>();
+
+            ushort address = modbusMatrixNode.Start;
+
+            for (int i = 0; i <= modbusMatrixNode.Rows * modbusMatrixNode.Columns; i++)
             {
-                case ModbusRegisterType.Coils:
-                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(coils)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(inputRegisters)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(discreteInputs)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(holdingRegister)));
-                    dataValue = dataValues;
-                    break;
-                default:
-                    dataValues = null;
-                    dataValue = dataValues;
-                    break;
+                switch (modbusMatrixNode.RegisterType)
+                {
+                    case ModbusRegisterType.Coils:
+                        bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(coils);
+                        break;
+                    case ModbusRegisterType.InputRegister:
+                        ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(inputRegisters);
+                        break;
+                    case ModbusRegisterType.DiscreteInputs:
+                        bool[] discreteInputs = _modbusMaster.ReadInputs(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(discreteInputs);
+                        break;
+                    case ModbusRegisterType.HoldingRegister:
+                        ushort[] holdingRegister = _modbusMaster.ReadHoldingRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(holdingRegister);
+                        break;
+                    default:
+                        values.Add(null);
+                        break;
+                }
+
+                address = (ushort)(address + modbusMatrixNode.RegisterAmount);
+
             }
+
+            dataValues.Add((modbusMatrixNode, new DataValue(values)));
+            dataValue = dataValues;
+
         }
 
+        //TODO: Si el nodo es mayor a uno hay que escribir más veces porque WriteSingle... escribe una sola dirección
         public void WriteValue(Node node, DataValue dataValue, out Domain.Core.Concrete.Result results)
         {
             ModbusNode modbusNode = (ModbusNode)node;
@@ -142,12 +162,12 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             switch (modbusNode.RegisterType)
             {
                 case ModbusRegisterType.Coils:
-                    bool value = (bool)dataValue.Value;
+                    bool value = Convert.ToBoolean(dataValue.Value);
                     _modbusMaster.WriteSingleCoil(SlaveAddress, modbusNode.Start, value);
                     results = Result.Success();
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort uvalue = (ushort)dataValue.Value;
+                    ushort uvalue = Convert.ToUInt16(dataValue.Value);
                     _modbusMaster.WriteSingleRegister(SlaveAddress, modbusNode.Start, uvalue);
                     results = Result.Success();
                     break;
@@ -173,13 +193,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                         try
                         {
                             convertedValues = enumerable.Select(item => Convert.ToBoolean(item)).ToArray();
+                            _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])convertedValues);
+
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error de conversión a bool en ID: {dataValue[i].Item1} - {ex.Message}");
+                            results = Result.Failure("Error");
                         }
 
-                        _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])convertedValues);
                     }
                     else if (dataValue[i].Item2.Value is IEnumerable<bool> booleanArray)
                     {
@@ -195,13 +216,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                         try
                         {
                             convertedValues = enumerable.Select(item => Convert.ToUInt16(item)).ToArray();
+                            _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])convertedValues);
+
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Error de conversión a ushort en ID: {dataValue[i].Item1} - {ex.Message}");
+                            results = Result.Failure("Error");
                         }
 
-                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])convertedValues);
                     }
                     else if (dataValue[i].Item2.Value is IEnumerable<ushort> ushortArray)
                     {
@@ -210,11 +232,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                 }
                 else
                 {
-                    Console.WriteLine($"ID {dataValue[i].Item1}: Tipo de ModbusRegisterType no reconocido.");
+                    results = Result.Failure("Error");
                 }
             }
 
-            results = Result.Failure("Error");
+            results = Result.Success();
         }
     }
 }

@@ -77,7 +77,7 @@ namespace ModbusTCPProtocol.ConsoleApp
             List<(ModbusMatrixNode, DataValue)> writeValues = new List<(ModbusMatrixNode, DataValue)> { (modbusMatrixNodeHoldingRegister, dataUwriteValues), (modbusMatrixNodeCoil, dataBoolWriteValues) };
             List<(ModbusMatrixNode, DataValue)> readValues = new List<(ModbusMatrixNode, DataValue)> { (modbusMatrixNodeHoldingRegister, dataReadHoldingRegister), (modbusMatrixNodeCoil, dataReadCoil), (modbusMatrixNodeDiscreteInputsRegister, dataReadInputRegister), (modbusMatrixNodeInputRegister, dataReadInputRegister) };
 
-            Result<ModbusMatrixNode> modbusMatrixNodeResult = ModbusMatrixNode.Create(0, 1, ModbusRegisterType.Coils, 2, 2);
+            Result<ModbusMatrixNode> modbusMatrixNodeResult = ModbusMatrixNode.Create(0, 2, ModbusRegisterType.HoldingRegister, 1, 2);
 
             ModbusMatrixNode modbusMatrixNode = modbusMatrixNodeResult.Value;
 
