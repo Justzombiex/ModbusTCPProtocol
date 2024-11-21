@@ -104,4 +104,33 @@ public class ModbusTCPTests
         Assert.True(results.IsSuccess);  
     }
 
+    [Theory]
+    [InlineData("192.168.133.85:502")]
+    public void Discovery_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
+    {
+        // Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+
+        // Act
+        var result = session.Discovery(endpoint);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsFailure);
+    }
+
+    [Theory]
+    [InlineData("192.168.133.85:503")]
+    public void Discovery_ShouldReturnFailure_WhenConnectionFails(string endpoint)
+    {
+        // Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+
+        // Act
+        var result = session.Discovery(endpoint);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.True(result.IsFailure);
+    }
 }
