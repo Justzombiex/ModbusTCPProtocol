@@ -1,3 +1,4 @@
+using Domain.Core.Concrete;
 using ModbusTCP.Implementacion.dataSourceCommunication;
 using ModbusTCP.Implementacion.ModbusTCPCommunicationSession;
 using Moq;
@@ -78,4 +79,29 @@ public class ModbusTCPTests
         // Assert
         Assert.NotNull(dataValue);
     }
+
+    [Theory]
+    [InlineData(ModbusRegisterType.Coils, true)]
+    [InlineData(ModbusRegisterType.HoldingRegister, (ushort)12345)]
+    public void WriteValue_ShouldWriteCorrectValue_ForValidRegisterTypes(ModbusRegisterType registerType, object value)
+    {
+        // Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid()) { SlaveAddress = 1 };
+
+        var result = ModbusNode.Create(0, 10, registerType);
+
+        Node node = result.Value;
+
+        var dataValue = new DataValue(value);
+
+        Result results;
+
+        // Act
+        session.Connect("192.168.133.85:502");
+        session.WriteValue(node, dataValue, out results);
+
+        // Assert
+        Assert.True(results.IsSuccess);  
+    }
+
 }
