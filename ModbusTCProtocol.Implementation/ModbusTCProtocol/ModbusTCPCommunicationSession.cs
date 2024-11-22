@@ -82,21 +82,26 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Discovery(string endpoint)
         {
-            try
-            {
-                var ipEndpoint = IPEndPoint.Parse(endpoint);
 
-                using (var tcpClient = new TcpClient())
+            var ipEndpoint = IPEndPoint.Parse(endpoint);
+
+            using (var tcpClient = new TcpClient())
+            {
+                tcpClient.Connect(ipEndpoint);
+                ModbusFactory modbusFactory = new ModbusFactory();
+                IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
+                var deviceInfo = modbusMaster.ReadHoldingRegisters(SlaveAddress, 0, 1);
+                if(deviceInfo != null)
                 {
-                    tcpClient.Connect(ipEndpoint);
+                    return Result.Success();
+                }
+                else
+                {
+                    return Result.Failure("La solicitud de lectura no funcionó");
                 }
 
-                return Result.Success();
             }
-            catch (Exception ex)
-            {
-                return Result.Failure(ex.Message);
-            }
+
         }
 
         public void ReadValue(Node node, out DataValue dataValue)
