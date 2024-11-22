@@ -207,7 +207,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     break;
             }
 
-            results = Result.Failure("El tipo de dato en modbusNode.RegisterType no es correcto");
+            results = Result.Success();
 
         }
 
