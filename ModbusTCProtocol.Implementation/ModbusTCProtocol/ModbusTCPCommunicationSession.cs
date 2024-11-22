@@ -9,7 +9,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 {
     public class ModbusTCPCommunicationSession : IDataSourceCommunicationSession
     {
-        public TcpClient _tcpclient;
+        public TcpClient TCPClient;
 
         public IModbusMaster _modbusMaster;
 
@@ -24,9 +24,9 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         public ModbusTCPCommunicationSession(byte slaveAddress, Guid dataSourceId)
         {
             SlaveAddress = slaveAddress;
-            _tcpclient = new TcpClient();
+            TCPClient = new TcpClient();
             var Factory = new ModbusFactory();
-            _modbusMaster = Factory.CreateMaster(_tcpclient);
+            _modbusMaster = Factory.CreateMaster(TCPClient);
 
             DataSourceId = dataSourceId;
             SessionId = Guid.NewGuid();
@@ -55,7 +55,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             try
             {
-                _tcpclient.Connect(ipEndpoint);
+                TCPClient.Connect(ipEndpoint);
 
                 return Result.Success();
             }
@@ -69,7 +69,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         {
             try
             {
-                _tcpclient.Close();
+                TCPClient.Close();
 
             }
             catch (Exception ex)
@@ -82,21 +82,26 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Discovery(string endpoint)
         {
-            try
-            {
-                var ipEndpoint = IPEndPoint.Parse(endpoint);
 
-                using (var tcpClient = new TcpClient())
+            var ipEndpoint = IPEndPoint.Parse(endpoint);
+
+            using (var tcpClient = new TcpClient())
+            {
+                tcpClient.Connect(ipEndpoint);
+                ModbusFactory modbusFactory = new ModbusFactory();
+                IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
+                var deviceInfo = modbusMaster.ReadHoldingRegisters(SlaveAddress, 0, 1);
+                if(deviceInfo != null)
                 {
-                    tcpClient.Connect(ipEndpoint);
+                    return Result.Success();
+                }
+                else
+                {
+                    return Result.Failure("La solicitud de lectura no funcionó");
                 }
 
-                return Result.Success();
             }
-            catch (Exception ex)
-            {
-                return Result.Failure(ex.Message);
-            }
+
         }
 
         public void ReadValue(Node node, out DataValue dataValue)

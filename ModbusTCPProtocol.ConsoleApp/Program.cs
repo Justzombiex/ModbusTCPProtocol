@@ -10,7 +10,7 @@ namespace ModbusTCPProtocol.ConsoleApp
         {
             bool salir = false;
 
-            string endpoint = "192.168.133.85:502";
+            string endpoint = "127.0.0.1:502";
             ModbusTCPCommunicationSession modbusTCPCommunicationSession = new ModbusTCPCommunicationSession(1, new Guid());
 
             modbusTCPCommunicationSession.Discovery(endpoint);
