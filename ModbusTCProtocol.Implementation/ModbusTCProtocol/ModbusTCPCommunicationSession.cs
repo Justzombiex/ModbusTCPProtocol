@@ -11,7 +11,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
     {
         public TcpClient TCPClient;
 
-        public IModbusMaster _modbusMaster;
+        public IModbusMaster ModbusMaster;
 
         public byte SlaveAddress;
         /// <summary>
@@ -26,7 +26,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             SlaveAddress = slaveAddress;
             TCPClient = new TcpClient();
             var Factory = new ModbusFactory();
-            _modbusMaster = Factory.CreateMaster(TCPClient);
+            ModbusMaster = Factory.CreateMaster(TCPClient);
 
             DataSourceId = dataSourceId;
             SessionId = Guid.NewGuid();
@@ -112,19 +112,19 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             {
 
                 case ModbusRegisterType.Coils:
-                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(coils);
                     break;
                 case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    ushort[] inputRegisters = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    bool[] discreteInputs = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    ushort[] holdingRegister = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
@@ -146,19 +146,19 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                 switch (modbusMatrixNode.RegisterType)
                 {
                     case ModbusRegisterType.Coils:
-                        bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
                         values.Add(coils);
                         break;
                     case ModbusRegisterType.InputRegister:
-                        ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        ushort[] inputRegisters = ModbusMaster.ReadInputRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
                         values.Add(inputRegisters);
                         break;
                     case ModbusRegisterType.DiscreteInputs:
-                        bool[] discreteInputs = _modbusMaster.ReadInputs(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
                         values.Add(discreteInputs);
                         break;
                     case ModbusRegisterType.HoldingRegister:
-                        ushort[] holdingRegister = _modbusMaster.ReadHoldingRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
                         values.Add(holdingRegister);
                         break;
                     default:
@@ -189,7 +189,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     value = (bool[])dataValue.Value;
                     if (value.Length <= modbusNode.RegisterAmount)
                     {
-                        _modbusMaster.WriteMultipleCoils(SlaveAddress, modbusNode.Start, value);
+                        ModbusMaster.WriteMultipleCoils(SlaveAddress, modbusNode.Start, value);
                     }
                     else
                     {
@@ -200,7 +200,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     uvalue = (ushort[])dataValue.Value;
                     if (uvalue.Length <= modbusNode.RegisterAmount)
                     {
-                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNode.Start, uvalue);
+                        ModbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNode.Start, uvalue);
                     }
                     else
                     {
@@ -241,7 +241,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                                     convertedValues = enumerable.Select(item => Convert.ToBoolean(item)).ToArray();
                                     if (convertedValues is Array arr && arr.Length <= dataValue[i].Item1.RegisterAmount)
                                     {
-                                        _modbusMaster.WriteMultipleCoils(SlaveAddress, address, (bool[])convertedValues);
+                                        ModbusMaster.WriteMultipleCoils(SlaveAddress, address, (bool[])convertedValues);
                                     }
                                     else
                                     {
@@ -259,7 +259,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                             {
                                 if (booleanArray.Count() <= dataValue[i].Item1.RegisterAmount)
                                 {
-                                    _modbusMaster.WriteMultipleCoils(SlaveAddress, address, (bool[])booleanArray);
+                                    ModbusMaster.WriteMultipleCoils(SlaveAddress, address, (bool[])booleanArray);
 
                                 }
                                 else
@@ -280,7 +280,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                                     convertedValues = enumerable.Select(item => Convert.ToUInt16(item)).ToArray();
                                     if (convertedValues is Array arr && arr.Length <= dataValue[i].Item1.RegisterAmount)
                                     {
-                                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])convertedValues);
+                                        ModbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])convertedValues);
 
                                     }
                                     else
@@ -298,7 +298,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                             {
                                 if (ushortArray.Count() <= dataValue[i].Item1.RegisterAmount)
                                 {
-                                    _modbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])ushortArray);
+                                    ModbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])ushortArray);
 
                                 }
                                 else
