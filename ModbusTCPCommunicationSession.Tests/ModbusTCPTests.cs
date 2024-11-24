@@ -59,7 +59,8 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("127.0.0.1:502")]
+    [InlineData("192.168.112.85:502")]
+    [InlineData("192.168.112.59:502")]
     public void Discovery_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
     {
         // Arrange
@@ -74,7 +75,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("127.0.0.2:503")]
+    [InlineData("127.0.0.1:503")]
     public void Discovery_ShouldReturnFailure_WhenConnectionFails(string endpoint)
     {
         // Arrange
@@ -105,7 +106,6 @@ public class ModbusTCPTests
         Result results;
 
         // Act
-        session.Connect("127.0.0.1:502");
         session.WriteValue(node, dataValue, out results);
 
         // Assert
@@ -133,11 +133,12 @@ public class ModbusTCPTests
 
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
 
+        DataValue listValue = new DataValue(myList);
+
         Result results;
 
         // Act
-        session.Connect("127.0.0.1:502");
-        session.WriteValues(myList, out results);
+        session.WriteValues(listValue, out results);
 
         // Assert
         Assert.True(results.IsSuccess);
@@ -158,7 +159,6 @@ public class ModbusTCPTests
         var node = result.Value;
 
         // Act
-        session.Connect("127.0.0.1:502");
         session.ReadValue(node, out dataValue);
 
         // Assert
@@ -180,7 +180,6 @@ public class ModbusTCPTests
         var matrixNode = result.Value;
 
         // Act
-        session.Connect("127.0.0.1:502");
         session.ReadValues(matrixNode, out dataValue);
 
         // Assert
