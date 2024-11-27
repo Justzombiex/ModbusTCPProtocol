@@ -2,6 +2,7 @@
 using Domain.EntityModels;
 using ModbusTCP.Implementacion.dataSourceCommunication;
 using NModbus;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -179,6 +180,115 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         }
 
+        public void WriteValues(List<Node> nodes, List<DataValue> dataValues, out Domain.Core.Concrete.Result results)
+        {
+            List<ModbusNode> modbusNodes = new List<ModbusNode>();
+
+            foreach (Node node in nodes)
+            {
+                modbusNodes.Add((ModbusNode)node);
+            }
+
+            for (int i = 0; i <= modbusNodes.Count && i <= nodes.Count; i++)
+            {
+                object convertedValues = null;
+
+                switch (modbusNodes[i].RegisterType)
+                {
+                    case ModbusRegisterType.HoldingRegister:
+                        if (dataValues[i].Value is IEnumerable<object> enumerableUShort)
+                        {
+                            try
+                            {
+                                convertedValues = enumerableUShort.Select(item => Convert.ToUInt16(item)).ToArray();
+
+                                if (convertedValues is Array arr && arr.Length <= modbusNodes[i].RegisterAmount)
+                                {
+                                    ModbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNodes[i].Start, (ushort[])convertedValues);
+                                }
+                                else
+                                {
+                                    results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                                }
+
+                            }
+                            catch (Exception ex)
+                            {
+                                results = Result.Failure("Error");
+                            }
+                        }
+                        else if (dataValues[i].Value is IEnumerable<ushort> ushortArray)
+                        {
+                            if (ushortArray.Count() <= modbusNodes[i].RegisterAmount)
+                            {
+                                ModbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNodes[i].Start, (ushort[])ushortArray);
+
+                            }
+                            else
+                            {
+                                results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                            }
+
+                        }
+                        break;
+                    case ModbusRegisterType.Coils:
+                        // Intentar convertir a bool[]
+                        if (dataValues[i].Value is IEnumerable<object> enumerableBool)
+                        {
+                            try
+                            {
+                                convertedValues = enumerableBool.Select(item => Convert.ToBoolean(item)).ToArray();
+
+                                if (convertedValues is Array arr && arr.Length <= modbusNodes[i].RegisterAmount)
+                                {
+                                    ModbusMaster.WriteMultipleCoils(SlaveAddress, modbusNodes[i].Start, (bool[])convertedValues);
+                                    WriteMultipleCoils(SlaveAddress, modbusNodes[i].Start, (bool[])convertedValues, ModbusMaster);
+
+                                }
+                                else
+                                {
+                                    results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                                }
+
+                            }
+                            catch (Exception ex)
+                            {
+                                results = Result.Failure("Error");
+                            }
+
+                        }
+                        else if (dataValues[i].Value is IEnumerable<bool> booleanArray)
+                        {
+                            if (booleanArray.Count() <= modbusNodes[i].RegisterAmount)
+                            {
+
+                                WriteMultipleCoils(SlaveAddress, modbusNodes[i].Start, (bool[])booleanArray, ModbusMaster);
+
+                            }
+                            else
+                            {
+                                results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+
+                            }
+                        }
+                        break;
+                    default:
+                        results = Result.Failure("No es posible escribir en el registro especificado por el Nodo");
+                        break;
+
+                }
+            }
+
+            if(!dataValues.Any() || !modbusNodes.Any())
+            {
+                results = Result.Failure("Las listas están vacías");
+            }
+            else
+            {
+                results = Result.Success();
+            }
+        }
+
         public void WriteValue(Node node, DataValue dataValue, out Domain.Core.Concrete.Result results)
         {
             ModbusNode modbusNode = (ModbusNode)node;
@@ -222,7 +332,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         //Ese data value tiene una lista de tuplas
         public void WriteValues(DataValue dataValue, out Domain.Core.Concrete.Result results)
         {
-            var dataValues = (List<(ModbusMatrixNode,DataValue)>)dataValue.Value;
+            var dataValues = (List<(ModbusMatrixNode, DataValue)>)dataValue.Value;
 
             for (int i = 0; i < dataValues.Count; i++)
             {
