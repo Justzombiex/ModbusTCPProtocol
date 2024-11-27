@@ -59,8 +59,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("192.168.112.85:502")]
-    [InlineData("192.168.112.59:502")]
+    [InlineData("127.0.0.1:502")]
     public void Discovery_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
     {
         // Arrange
