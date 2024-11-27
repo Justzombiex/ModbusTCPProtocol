@@ -92,7 +92,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     tcpClient.Connect(ipEndpoint);
                     ModbusFactory modbusFactory = new ModbusFactory();
                     IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
-                    tcpClient.ReceiveTimeout = 2000;
+                    tcpClient.ReceiveTimeout = 10000;
                     var deviceInfo = modbusMaster.ReadHoldingRegisters(SlaveAddress, 0, 1);
                     if (deviceInfo != null)
                     {
