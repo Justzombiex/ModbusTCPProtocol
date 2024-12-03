@@ -186,5 +186,104 @@ public class ModbusTCPTests
         Assert.NotNull(dataValue);
     }
 
+    [Fact]
+    public void AddSubscription_ShouldExecuteFunction()
+    {
+        
+        //Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("192.168.0.214:502");
+        var dataValue = new DataValue(1);
+        object objeto = new object();
+        Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
+        object server = null;
+
+        //Act
+        
+            session.AddSuscription(result1.Value, objeto, Function, out server);
+
+    
+    while (prueba) 
+        { 
+
+        }
+        
+        //Assert
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void RemoveSubscription_ShouldNotExecuteFunction()
+    {
+        //Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("192.168.0.214:502");
+        var dataValue = new DataValue(1);
+        object objeto = new object();
+        Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
+        object server = null;
+
+        //Act
+
+        session.AddSuscription(result1.Value, objeto, Function, out server);
+        session.RemoveSuscription(result1.Value);
+
+        DateTime startTime = DateTime.Now;
+
+        while (prueba)
+        {
+
+            if ((DateTime.Now - startTime).TotalSeconds >= 10)
+            {
+                Console.WriteLine("Han pasado 5 segundos. Deteniendo el ciclo.");
+                break;  // Salir del ciclo
+            }
+        }
+
+        //Assert
+        Assert.True(prueba);
+    }
+
+    [Fact]
+    public void RemoveAllSubscriptions_ShouldNotExecuteFunction()
+    {
+
+        //Arrange
+        var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("192.168.0.214:502");
+        var dataValue = new DataValue(1);
+        object objeto = new object();
+        Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
+        object server = null;
+
+        //Act
+
+        session.AddSuscription(result1.Value, objeto, Function, out server);
+        session.RemoveAllSuscriptions();
+
+        DateTime startTime = DateTime.Now;
+
+        while (prueba)
+        {
+
+            if ((DateTime.Now - startTime).TotalSeconds >= 10)
+            {
+                Console.WriteLine("Han pasado 5 segundos. Deteniendo el ciclo.");
+                break;  // Salir del ciclo
+            }
+        }
+
+        //Assert
+        Assert.True(prueba);
+
+    }
+
+    private bool prueba = true;
+
+    private void Function(object clientHandle, DataValue dataValue)
+    {
+        prueba = false;
+    }
+
 
 }

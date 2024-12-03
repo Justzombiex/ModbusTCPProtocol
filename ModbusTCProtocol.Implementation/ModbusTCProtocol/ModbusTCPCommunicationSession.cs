@@ -1,9 +1,11 @@
 ﻿using Domain.Core.Concrete;
 using Domain.EntityModels;
 using ModbusTCP.Implementacion.dataSourceCommunication;
+using ModbusTCProtocol.Implementation.ModbusTCProtocol;
 using NModbus;
 using System.Net;
 using System.Net.Sockets;
+using System.Xml.Linq;
 
 namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 {
@@ -14,6 +16,12 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         public IModbusMaster ModbusMaster;
 
         public byte SlaveAddress;
+
+        /// <summary>
+        /// Manejador de tareas de la sesión
+        /// </summary>
+        private TaskManager TaskManager;
+
         /// <summary>
         /// Identificador de la fuente de datos a la cual pertenece la sesión.
         /// </summary>
@@ -21,22 +29,47 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Guid SessionId { get; }
 
+
         public ModbusTCPCommunicationSession(byte slaveAddress, Guid dataSourceId)
         {
             SlaveAddress = slaveAddress;
+            
             TCPClient = new TcpClient();
+            
             var Factory = new ModbusFactory();
+            
             ModbusMaster = Factory.CreateMaster(TCPClient);
 
             DataSourceId = dataSourceId;
+            
             SessionId = Guid.NewGuid();
         }
 
 
         public void AddSuscription(Node node, object clientHandle, valueChanged callback, out object serverHandle)
         {
-            throw new NotImplementedException();
+            if (TaskManager == null)
+            {
+                TaskManager = new TaskManager(ModbusMaster, this.SlaveAddress);
+            }
+
+            TaskManager.AddNodes(node, callback, out serverHandle);
         }
+
+        public void RemoveSuscription(Node node)
+        {
+            TaskManager.RemoveNodes(node);
+        }
+
+        public void RemoveAllSuscriptions()
+        {
+            TaskManager.RemoveAllNodes();
+        }
+
+        
+
+        //remove all, remove one (quitar el evento, y despues eliminamos el nodo)
+
 
         public Result Browse()
         {
@@ -115,7 +148,6 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             switch (modbusNode.RegisterType)
             {
-
                 case ModbusRegisterType.Coils:
                     bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(coils);
@@ -125,11 +157,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
