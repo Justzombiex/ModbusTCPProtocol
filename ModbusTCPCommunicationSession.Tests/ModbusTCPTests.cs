@@ -15,7 +15,7 @@ public class ModbusTCPTests
 {
 
     [Theory]
-    [InlineData("127.0.0.1:502")]
+    [InlineData("http://127.0.0.1/api/resource")]
     public void Connect_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
     {
         // Arrange
@@ -30,7 +30,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("127.0.0.1:503")]
+    [InlineData("http://123.0.0.1/api/resource")]
     public void Connect_ShouldReturnFailure_WhenConnectionFails(string endpoint)
     {
         // Arrange
@@ -59,7 +59,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("127.0.0.1:502")]
+    [InlineData("http://127.0.0.1/api/resource")]
     public void Discovery_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
     {
         // Arrange
@@ -74,7 +74,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("127.0.0.1:503")]
+    [InlineData("http://129.0.0.1/api/resource")]
     public void Discovery_ShouldReturnFailure_WhenConnectionFails(string endpoint)
     {
         // Arrange
@@ -95,7 +95,7 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("127.0.0.1:502");
+        session.Connect("http://127.0.0.1/api/resource");
 
         var result = ModbusNode.Create(0, 2, registerType);
 
@@ -136,7 +136,7 @@ public class ModbusTCPTests
         myList.Add((modbusMatrixNode1, dataValue1));
 
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("127.0.0.1:502");
+        session.Connect("http://127.0.0.1/api/resource");
 
 
         DataValue listValue = new DataValue(myList);
@@ -160,7 +160,7 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("127.0.0.1:502");
+        session.Connect("http://127.0.0.1/api/resource");
         object obj = new object();
         var dataValue = new DataValue(obj);
         var result = ModbusNode.Create(start, amount, registerType);
@@ -183,7 +183,7 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("127.0.0.1:502");
+        session.Connect("http://127.0.0.1/api/resource");
         object obj = new object();
         var dataValue = new DataValue(obj);
         var result = ModbusMatrixNode.Create(start, amount, registerType, 1, 2);
@@ -203,7 +203,7 @@ public class ModbusTCPTests
 
         //Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("192.168.0.214:502");
+        session.Connect("http://127.0.0.1/api/resource");
         var dataValue = new DataValue(1);
         object objeto = new object();
         Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
@@ -229,7 +229,7 @@ public class ModbusTCPTests
     {
         //Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("192.168.0.214:502");
+        session.Connect("http://127.0.0.1/api/resource");
         var dataValue = new DataValue(1);
         object objeto = new object();
         Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);
@@ -264,7 +264,7 @@ public class ModbusTCPTests
 
         //Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
-        session.Connect("192.168.0.214:502");
+        session.Connect("http://127.0.0.1/api/resource");
         var dataValue = new DataValue(1);
         object objeto = new object();
         Result<ModbusNode> result1 = ModbusNode.Create(0, 4, ModbusRegisterType.HoldingRegister);

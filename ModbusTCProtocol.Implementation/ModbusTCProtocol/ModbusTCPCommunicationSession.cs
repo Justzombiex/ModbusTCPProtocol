@@ -66,15 +66,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             TaskManager.RemoveAllNodes();
         }
 
-        
-
-        //remove all, remove one (quitar el evento, y despues eliminamos el nodo)
-
-
         public Result Browse()
         {
             throw new NotImplementedException();
         }
+
 
         /// <summary>
         /// 
@@ -84,11 +80,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         /// <returns></returns>
         public Result Connect(string endpoint)
         {
-            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
 
             try
             {
-                TCPClient.Connect(ipEndpoint);
+                TCPClient.Connect(ip,port);
 
                 return Result.Success();
             }
