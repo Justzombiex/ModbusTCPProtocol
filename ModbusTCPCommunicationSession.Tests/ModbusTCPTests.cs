@@ -59,8 +59,7 @@ public class ModbusTCPTests
     }
 
     [Theory]
-    [InlineData("192.168.112.85:502")]
-    [InlineData("192.168.112.59:502")]
+    [InlineData("127.0.0.1:502")]
     public void Discovery_ShouldReturnSuccess_WhenConnectionIsSuccessful(string endpoint)
     {
         // Arrange
@@ -96,8 +95,9 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("127.0.0.1:502");
 
-        var result = ModbusNode.Create(0, 10, registerType);
+        var result = ModbusNode.Create(0, 2, registerType);
 
         Node node = result.Value;
 
@@ -105,11 +105,15 @@ public class ModbusTCPTests
 
         Result results;
 
+        var readValue = new DataValue(null);
+
         // Act
         session.WriteValue(node, dataValue, out results);
+        session.Disconnect();
 
         // Assert
         Assert.True(results.IsSuccess);
+
     }
 
     [Fact]
@@ -132,6 +136,8 @@ public class ModbusTCPTests
         myList.Add((modbusMatrixNode1, dataValue1));
 
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("127.0.0.1:502");
+
 
         DataValue listValue = new DataValue(myList);
 
@@ -139,6 +145,7 @@ public class ModbusTCPTests
 
         // Act
         session.WriteValues(listValue, out results);
+        session.Disconnect();
 
         // Assert
         Assert.True(results.IsSuccess);
@@ -153,6 +160,7 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("127.0.0.1:502");
         object obj = new object();
         var dataValue = new DataValue(obj);
         var result = ModbusNode.Create(start, amount, registerType);
@@ -160,6 +168,7 @@ public class ModbusTCPTests
 
         // Act
         session.ReadValue(node, out dataValue);
+        session.Disconnect();
 
         // Assert
         Assert.NotNull(dataValue);
@@ -174,6 +183,7 @@ public class ModbusTCPTests
     {
         // Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
+        session.Connect("127.0.0.1:502");
         object obj = new object();
         var dataValue = new DataValue(obj);
         var result = ModbusMatrixNode.Create(start, amount, registerType, 1, 2);
@@ -181,6 +191,7 @@ public class ModbusTCPTests
 
         // Act
         session.ReadValues(matrixNode, out dataValue);
+        session.Disconnect();
 
         // Assert
         Assert.NotNull(dataValue);
@@ -189,7 +200,7 @@ public class ModbusTCPTests
     [Fact]
     public void AddSubscription_ShouldExecuteFunction()
     {
-        
+
         //Arrange
         var session = new ModbusTCPCommunicationSession(1, Guid.NewGuid());
         session.Connect("192.168.0.214:502");
@@ -199,15 +210,16 @@ public class ModbusTCPTests
         object server = null;
 
         //Act
-        
-            session.AddSuscription(result1.Value, objeto, Function, out server);
 
-    
-    while (prueba) 
-        { 
+        session.AddSuscription(result1.Value, objeto, Function, out server);
+
+
+        while (prueba)
+        {
 
         }
-        
+        session.Disconnect();
+
         //Assert
         Assert.True(true);
     }
@@ -239,6 +251,8 @@ public class ModbusTCPTests
                 break;  // Salir del ciclo
             }
         }
+
+        session.Disconnect();
 
         //Assert
         Assert.True(prueba);
@@ -272,6 +286,8 @@ public class ModbusTCPTests
                 break;  // Salir del ciclo
             }
         }
+
+        session.Disconnect();
 
         //Assert
         Assert.True(prueba);
