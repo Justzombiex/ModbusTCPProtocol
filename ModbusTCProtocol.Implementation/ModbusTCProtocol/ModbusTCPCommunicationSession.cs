@@ -1,19 +1,27 @@
 ﻿using Domain.Core.Concrete;
 using Domain.EntityModels;
 using ModbusTCP.Implementacion.dataSourceCommunication;
+using ModbusTCProtocol.Implementation.ModbusTCProtocol;
 using NModbus;
 using System.Net;
 using System.Net.Sockets;
+using System.Xml.Linq;
 
 namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 {
     public class ModbusTCPCommunicationSession : IDataSourceCommunicationSession
     {
-        public TcpClient _tcpclient;
+        public TcpClient TCPClient;
 
-        public IModbusMaster _modbusMaster;
+        public IModbusMaster ModbusMaster;
 
         public byte SlaveAddress;
+
+        /// <summary>
+        /// Manejador de tareas de la sesión
+        /// </summary>
+        private TaskManager TaskManager;
+
         /// <summary>
         /// Identificador de la fuente de datos a la cual pertenece la sesión.
         /// </summary>
@@ -21,27 +29,48 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Guid SessionId { get; }
 
+
         public ModbusTCPCommunicationSession(byte slaveAddress, Guid dataSourceId)
         {
             SlaveAddress = slaveAddress;
-            _tcpclient = new TcpClient();
+            
+            TCPClient = new TcpClient();
+            
             var Factory = new ModbusFactory();
-            _modbusMaster = Factory.CreateMaster(_tcpclient);
+            
+            ModbusMaster = Factory.CreateMaster(TCPClient);
 
             DataSourceId = dataSourceId;
+            
             SessionId = Guid.NewGuid();
         }
 
 
         public void AddSuscription(Node node, object clientHandle, valueChanged callback, out object serverHandle)
         {
-            throw new NotImplementedException();
+            if (TaskManager == null)
+            {
+                TaskManager = new TaskManager(ModbusMaster, this.SlaveAddress);
+            }
+
+            TaskManager.AddNodes(node, callback, out serverHandle);
+        }
+
+        public void RemoveSuscription(Node node)
+        {
+            TaskManager.RemoveNodes(node);
+        }
+
+        public void RemoveAllSuscriptions()
+        {
+            TaskManager.RemoveAllNodes();
         }
 
         public Result Browse()
         {
             throw new NotImplementedException();
         }
+
 
         /// <summary>
         /// 
@@ -51,10 +80,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         /// <returns></returns>
         public Result Connect(string endpoint)
         {
-            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
+
             try
             {
-                _tcpclient.Connect(ipEndpoint);
+                TCPClient.Connect(ip,port);
 
                 return Result.Success();
             }
@@ -66,9 +99,49 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Disconnect()
         {
-            _tcpclient.Close();
+            try
+            {
+                TCPClient.Close();
+
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
 
             return Result.Success();
+        }
+
+        public Result Discovery(string endpoint)
+        {
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
+
+            try
+            {
+                using (var tcpClient = new TcpClient())
+                {
+                    tcpClient.Connect(ip, port);
+                    ModbusFactory modbusFactory = new ModbusFactory();
+                    IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
+                    var deviceInfo = modbusMaster.ReadHoldingRegisters(SlaveAddress, 0, 1);
+                    if (deviceInfo != null)
+                    {
+                        return Result.Success();
+                    }
+                    else
+                    {
+                        return Result.Failure("La solicitud de lectura no funcionó");
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
         }
 
         public void ReadValue(Node node, out DataValue dataValue)
@@ -77,22 +150,20 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             switch (modbusNode.RegisterType)
             {
-                //TODO> Verificar si el numberOfPoints tiene que ser fijo en 1 o si ahí se debe utilizar modbusNode.RegisterAmount
-
                 case ModbusRegisterType.Coils:
-                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
+                    bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(coils);
                     break;
                 case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
+                    ushort[] inputRegisters = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, 1);
+                    bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, 1);
+                    ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
@@ -101,120 +172,218 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
             }
         }
 
-        public void ReadValues(ModbusMatrixNode modbusMatrixNode, out List<(ModbusMatrixNode, DataValue)>? dataValue)
+        public void ReadValues(ModbusMatrixNode modbusMatrixNode, out DataValue dataValue)
         {
             List<(ModbusMatrixNode, DataValue)>? dataValues = new List<(ModbusMatrixNode, DataValue)>();
 
-            switch (modbusMatrixNode.RegisterType)
+            List<object> values = new List<object>();
+
+            ushort address = modbusMatrixNode.Start;
+
+            for (int i = 0; i <= modbusMatrixNode.Rows * modbusMatrixNode.Columns; i++)
             {
-                case ModbusRegisterType.Coils:
-                    bool[] coils = _modbusMaster.ReadCoils(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(coils)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.InputRegister:
-                    ushort[] inputRegisters = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(inputRegisters)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = _modbusMaster.ReadCoils(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(discreteInputs)));
-                    dataValue = dataValues;
-                    break;
-                case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = _modbusMaster.ReadInputRegisters(SlaveAddress, modbusMatrixNode.Start, modbusMatrixNode.RegisterAmount);
-                    dataValues.Add((modbusMatrixNode, new DataValue(holdingRegister)));
-                    dataValue = dataValues;
-                    break;
-                default:
-                    dataValues = null;
-                    dataValue = dataValues;
-                    break;
+                switch (modbusMatrixNode.RegisterType)
+                {
+                    case ModbusRegisterType.Coils:
+                        bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(coils);
+                        break;
+                    case ModbusRegisterType.InputRegister:
+                        ushort[] inputRegisters = ModbusMaster.ReadInputRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(inputRegisters);
+                        break;
+                    case ModbusRegisterType.DiscreteInputs:
+                        bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(discreteInputs);
+                        break;
+                    case ModbusRegisterType.HoldingRegister:
+                        ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, address, modbusMatrixNode.RegisterAmount);
+                        values.Add(holdingRegister);
+                        break;
+                    default:
+                        break;
+                }
+
+                address = (ushort)(address + modbusMatrixNode.RegisterAmount);
+
             }
+
+            dataValue = new DataValue(values);
+
         }
 
         public void WriteValue(Node node, DataValue dataValue, out Domain.Core.Concrete.Result results)
         {
             ModbusNode modbusNode = (ModbusNode)node;
 
+            bool[] value = new bool[modbusNode.RegisterAmount];
+            ushort[] uvalue = new ushort[modbusNode.RegisterAmount];
+
             switch (modbusNode.RegisterType)
             {
                 case ModbusRegisterType.Coils:
-                    bool value = (bool)dataValue.Value;
-                    _modbusMaster.WriteSingleCoil(SlaveAddress, modbusNode.Start, value);
-                    results = Result.Success();
+                    value = (bool[])dataValue.Value;
+                    if (value.Length <= modbusNode.RegisterAmount)
+                    {
+                        WriteMultipleCoils(SlaveAddress, modbusNode.Start, value, ModbusMaster);
+                    }
+                    else
+                    {
+                        results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                    }
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort uvalue = (ushort)dataValue.Value;
-                    _modbusMaster.WriteSingleRegister(SlaveAddress, modbusNode.Start, uvalue);
-                    results = Result.Success();
+                    uvalue = (ushort[])dataValue.Value;
+                    if (uvalue.Length <= modbusNode.RegisterAmount)
+                    {
+                        ModbusMaster.WriteMultipleRegisters(SlaveAddress, modbusNode.Start, uvalue);
+                    }
+                    else
+                    {
+                        results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                    }
                     break;
                 default:
-                    results = Result.Failure("Error");
+                    results = Result.Failure("El tipo de registro no es correcto");
                     break;
             }
+
+            results = Result.Success();
+
         }
 
-        public void WriteValues(List<(ModbusMatrixNode, DataValue)> dataValue, out Domain.Core.Concrete.Result results)
+        //Ese data value tiene una lista de tuplas
+        public void WriteValues(DataValue dataValue, out Domain.Core.Concrete.Result results)
         {
+            var dataValues = (List<(ModbusMatrixNode,DataValue)>)dataValue.Value;
 
-            for (int i = 0; i < dataValue.Count; i++)
+            for (int i = 0; i < dataValues.Count; i++)
             {
 
-                object convertedValues = null;
+                ushort address = dataValues[i].Item1.Start;
 
-                if (dataValue[i].Item1.RegisterType == ModbusRegisterType.Coils)
+                for (int j = 0; j < dataValues[i].Item1.Columns * dataValues[i].Item1.Rows; j++)
                 {
-                    // Intentar convertir a bool[]
-                    if (dataValue[i].Item2.Value is IEnumerable<object> enumerable)
+                    if (dataValues[i].Item1.Columns * dataValues[i].Item1.Rows == dataValues.Count)
                     {
-                        try
-                        {
-                            convertedValues = enumerable.Select(item => Convert.ToBoolean(item)).ToArray();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error de conversión a bool en ID: {dataValue[i].Item1} - {ex.Message}");
-                        }
+                        object convertedValues = null;
 
-                        _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])convertedValues);
-                    }
-                    else if (dataValue[i].Item2.Value is IEnumerable<bool> booleanArray)
-                    {
-                        _modbusMaster.WriteMultipleCoils(SlaveAddress, dataValue[i].Item1.Start, (bool[])booleanArray);
-                    }
-
-                }
-                else if (dataValue[i].Item1.RegisterType == ModbusRegisterType.HoldingRegister)
-                {
-                    // Intentar convertir a ushort[]
-                    if (dataValue[i].Item2.Value is IEnumerable<object> enumerable)
-                    {
-                        try
+                        if (dataValues[i].Item1.RegisterType == ModbusRegisterType.Coils)
                         {
-                            convertedValues = enumerable.Select(item => Convert.ToUInt16(item)).ToArray();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error de conversión a ushort en ID: {dataValue[i].Item1} - {ex.Message}");
-                        }
+                            // Intentar convertir a bool[]
+                            if (dataValues[i].Item2.Value is IEnumerable<object> enumerable)
+                            {
+                                try
+                                {
+                                    convertedValues = enumerable.Select(item => Convert.ToBoolean(item)).ToArray();
+                                    if (convertedValues is Array arr && arr.Length <= dataValues[i].Item1.RegisterAmount)
+                                    {
+                                        ModbusMaster.WriteMultipleCoils(SlaveAddress, address, (bool[])convertedValues);
+                                        WriteMultipleCoils(SlaveAddress, address, (bool[])convertedValues, ModbusMaster);
 
-                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])convertedValues);
+                                    }
+                                    else
+                                    {
+                                        results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                                    }
+
+                                }
+                                catch (Exception ex)
+                                {
+                                    results = Result.Failure("Error");
+                                }
+
+                            }
+                            else if (dataValues[i].Item2.Value is IEnumerable<bool> booleanArray)
+                            {
+                                if (booleanArray.Count() <= dataValues[i].Item1.RegisterAmount)
+                                {
+
+                                    WriteMultipleCoils(SlaveAddress, address, (bool[])booleanArray, ModbusMaster);
+
+                                }
+                                else
+                                {
+                                    results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+
+                                }
+                            }
+
+                        }
+                        else if (dataValues[i].Item1.RegisterType == ModbusRegisterType.HoldingRegister)
+                        {
+                            // Intentar convertir a ushort[]
+                            if (dataValues[i].Item2.Value is IEnumerable<object> enumerable)
+                            {
+                                try
+                                {
+                                    convertedValues = enumerable.Select(item => Convert.ToUInt16(item)).ToArray();
+                                    if (convertedValues is Array arr && arr.Length <= dataValues[i].Item1.RegisterAmount)
+                                    {
+                                        ModbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])convertedValues);
+
+                                    }
+                                    else
+                                    {
+                                        results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                                    }
+
+                                }
+                                catch (Exception ex)
+                                {
+                                    results = Result.Failure("Error");
+                                }
+                            }
+                            else if (dataValues[i].Item2.Value is IEnumerable<ushort> ushortArray)
+                            {
+                                if (ushortArray.Count() <= dataValues[i].Item1.RegisterAmount)
+                                {
+                                    ModbusMaster.WriteMultipleRegisters(SlaveAddress, address, (ushort[])ushortArray);
+
+                                }
+                                else
+                                {
+                                    results = Result.Failure("Está intentando escribir un valor que excede el tamaño permitido en una dirección de memoria que no puede contenerlo.");
+                                }
+
+                            }
+                        }
+                        else
+                        {
+                            results = Result.Failure("El tipo de registro no coincide con los permitidos");
+                        }
                     }
-                    else if (dataValue[i].Item2.Value is IEnumerable<ushort> ushortArray)
+                    else
                     {
-                        _modbusMaster.WriteMultipleRegisters(SlaveAddress, dataValue[i].Item1.Start, (ushort[])ushortArray);
+                        results = Result.Failure("Los cantidad elementos de la matriz no coincide con la cantidad de elementos a escribir ");
                     }
                 }
-                else
-                {
-                    Console.WriteLine($"ID {dataValue[i].Item1}: Tipo de ModbusRegisterType no reconocido.");
-                }
+
+                address = (ushort)(address + dataValues[i].Item1.RegisterAmount);
             }
 
-            results = Result.Failure("Error");
+            results = Result.Success();
         }
+
+        #region Helpers
+
+        /// <summary>
+        /// Escritura de múltiples coils uno a uno
+        /// </summary>
+        /// <param name="slaveAddress">Dirección del esclavo</param>
+        /// <param name="startAddress">Dirección inicial</param>
+        /// <param name="data">Arreglo de datos booleanos</param>
+        /// <param name="modbusMaster">Maestro que va a ejecutar la operación</param>
+        private void WriteMultipleCoils(byte slaveAddress, ushort startAddress, bool[] data, IModbusMaster modbusMaster)
+        {
+            for (int i = 0; i < data.Length; i++)
+            {
+                modbusMaster.WriteSingleCoil(slaveAddress, (ushort)(startAddress + i), data[i]);
+            }
+        }
+
+        #endregion Helpers
+
     }
 }
 
