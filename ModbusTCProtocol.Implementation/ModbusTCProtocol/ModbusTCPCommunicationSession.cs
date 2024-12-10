@@ -114,13 +114,16 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Discovery(string endpoint)
         {
-            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
 
             try
             {
                 using (var tcpClient = new TcpClient())
                 {
-                    tcpClient.Connect(ipEndpoint);
+                    tcpClient.Connect(ip, port);
                     ModbusFactory modbusFactory = new ModbusFactory();
                     IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
                     var deviceInfo = modbusMaster.ReadHoldingRegisters(SlaveAddress, 0, 1);
