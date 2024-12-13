@@ -1,6 +1,7 @@
 ﻿using Domain.Core.Concrete;
 using ModbusTCP.Implementacion.dataSourceCommunication;
 using ModbusTCP.Implementacion.ModbusTCPCommunicationSession;
+using System.Timers;
 
 namespace ModbusTCPProtocol.ConsoleApp
 {
@@ -10,7 +11,7 @@ namespace ModbusTCPProtocol.ConsoleApp
         {
             bool salir = false;
 
-            string endpoint = "127.0.0.1:502";
+            string endpoint = "192.168.0.214:502";
 
             ModbusTCPCommunicationSession modbusTCPCommunicationSession = new ModbusTCPCommunicationSession(1, new Guid());
 
@@ -37,6 +38,12 @@ namespace ModbusTCPProtocol.ConsoleApp
             ModbusMatrixNode modbusMatrixNodeDiscreteInputsRegister = result7.Value;
             ModbusMatrixNode modbusMatrixNodeInputRegister = result8.Value;
 
+            DataValue dataValueSubscription = new DataValue(1);
+
+            object ObjectSubscription = dataValueSubscription;
+
+            object server = null;
+
             string[] uWriteValues = ["3", "24", "25", "53"];
             bool[] boolWriteValues = [true, true, false, true];
 
@@ -57,8 +64,6 @@ namespace ModbusTCPProtocol.ConsoleApp
             DataValue dataReadCoil = new DataValue(readCoil);
             DataValue dataReadInputRegister = new DataValue(readInputRegister);
             DataValue dataReadDiscreteInput = new DataValue(readDiscreteInpute);
-
-
 
             List<(ModbusMatrixNode, DataValue)> writeValues = new List<(ModbusMatrixNode, DataValue)> { (modbusMatrixNodeHoldingRegister, dataUwriteValues), (modbusMatrixNodeCoil, dataBoolWriteValues) };
             DataValue dataWriteValues = new DataValue(writeValues);
@@ -102,7 +107,6 @@ namespace ModbusTCPProtocol.ConsoleApp
                             {
                                 Console.WriteLine($"Has seleccionado la opción {opcionSeleccionada}");
                                 ManejarOpcionTCP(opcionSeleccionada);
-                                Console.WriteLine(result.ToString);
                             }
                             else
                             {
@@ -152,5 +156,23 @@ namespace ModbusTCPProtocol.ConsoleApp
                 }
             }
         }
+
+        private void SubscriptionFunctionCoils(object clientHandle, DataValue Value)
+        {
+            Console.WriteLine("Cambió Coils");
+        }
+        private void SubscriptionFunctionInputRegisters(object clientHandle, DataValue Value)
+        {
+            Console.WriteLine("Cambió InputRegisters");
+        }
+        private void SubscriptionFunctionHoldingRegister(object clientHandle, DataValue Value)
+        {
+            Console.WriteLine("Cambió HoldingRegisters");
+        }
+        private void SubscriptionFunctionDiscreteInputs(object clientHandle, DataValue Value)
+        {
+            Console.WriteLine("Cambió Inputs");
+        }
+
     }
 }

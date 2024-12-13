@@ -1,10 +1,12 @@
 ﻿using Domain.Core.Concrete;
 using Domain.EntityModels;
 using ModbusTCP.Implementacion.dataSourceCommunication;
+using ModbusTCProtocol.Implementation.ModbusTCProtocol;
 using NModbus;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Xml.Linq;
 
 namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 {
@@ -15,6 +17,12 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         public IModbusMaster ModbusMaster;
 
         public byte SlaveAddress;
+
+        /// <summary>
+        /// Manejador de tareas de la sesión
+        /// </summary>
+        private TaskManager TaskManager;
+
         /// <summary>
         /// Identificador de la fuente de datos a la cual pertenece la sesión.
         /// </summary>
@@ -22,27 +30,48 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Guid SessionId { get; }
 
+
         public ModbusTCPCommunicationSession(byte slaveAddress, Guid dataSourceId)
         {
             SlaveAddress = slaveAddress;
+            
             TCPClient = new TcpClient();
+            
             var Factory = new ModbusFactory();
+            
             ModbusMaster = Factory.CreateMaster(TCPClient);
 
             DataSourceId = dataSourceId;
+            
             SessionId = Guid.NewGuid();
         }
 
 
         public void AddSuscription(Node node, object clientHandle, valueChanged callback, out object serverHandle)
         {
-            throw new NotImplementedException();
+            if (TaskManager == null)
+            {
+                TaskManager = new TaskManager(ModbusMaster, this.SlaveAddress);
+            }
+
+            TaskManager.AddNodes(node, callback, out serverHandle);
+        }
+
+        public void RemoveSuscription(Node node)
+        {
+            TaskManager.RemoveNodes(node);
+        }
+
+        public void RemoveAllSuscriptions()
+        {
+            TaskManager.RemoveAllNodes();
         }
 
         public Result Browse()
         {
             throw new NotImplementedException();
         }
+
 
         /// <summary>
         /// 
@@ -52,11 +81,14 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
         /// <returns></returns>
         public Result Connect(string endpoint)
         {
-            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
 
             try
             {
-                TCPClient.Connect(ipEndpoint);
+                TCPClient.Connect(ip,port);
 
                 return Result.Success();
             }
@@ -83,13 +115,16 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Result Discovery(string endpoint)
         {
-            var ipEndpoint = IPEndPoint.Parse(endpoint);
+            Uri uri = new Uri(endpoint);
+
+            string ip = uri.Host;
+            int port = uri.IsDefaultPort ? 502 : uri.Port;
 
             try
             {
                 using (var tcpClient = new TcpClient())
                 {
-                    tcpClient.Connect(ipEndpoint);
+                    tcpClient.Connect(ip, port);
                     ModbusFactory modbusFactory = new ModbusFactory();
                     IModbusMaster modbusMaster = modbusFactory.CreateMaster(tcpClient);
                     tcpClient.ReceiveTimeout = 10000;
@@ -117,7 +152,6 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
             switch (modbusNode.RegisterType)
             {
-
                 case ModbusRegisterType.Coils:
                     bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(coils);
@@ -127,11 +161,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                     dataValue = new DataValue(inputRegisters);
                     break;
                 case ModbusRegisterType.DiscreteInputs:
-                    bool[] discreteInputs = ModbusMaster.ReadCoils(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(discreteInputs);
                     break;
                 case ModbusRegisterType.HoldingRegister:
-                    ushort[] holdingRegister = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
+                    ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, modbusNode.Start, modbusNode.RegisterAmount);
                     dataValue = new DataValue(holdingRegister);
                     break;
                 default:
