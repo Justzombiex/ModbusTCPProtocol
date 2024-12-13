@@ -189,7 +189,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                 modbusNodes.Add((ModbusNode)node);
             }
 
-            for (int i = 0; i <= modbusNodes.Count && i <= nodes.Count; i++)
+            for (int i = 0; i <= modbusNodes.Count && i <= dataValues.Count; i++)
             {
                 object convertedValues = null;
 
