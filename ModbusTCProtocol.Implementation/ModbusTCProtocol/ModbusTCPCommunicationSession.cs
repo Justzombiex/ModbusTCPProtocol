@@ -29,7 +29,11 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         public Guid SessionId { get; }
 
-
+        /// <summary>
+        /// Constructor de ModbusTCPCommunicationSession
+        /// </summary>
+        /// <param name="slaveAddress">Dirección del esclavo</param>
+        /// <param name="dataSourceId">Identificador de la fuente dde datos a la cual pertenece la sesión</param>
         public ModbusTCPCommunicationSession(byte slaveAddress, Guid dataSourceId)
         {
             SlaveAddress = slaveAddress;
@@ -290,7 +294,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                                 }
                                 catch (Exception ex)
                                 {
-                                    results = Result.Failure("Error");
+                                    results = Result.Failure(ex.Message);
                                 }
 
                             }
@@ -331,7 +335,7 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
                                 }
                                 catch (Exception ex)
                                 {
-                                    results = Result.Failure("Error");
+                                    results = Result.Failure(ex.Message);
                                 }
                             }
                             else if (dataValues[i].Item2.Value is IEnumerable<ushort> ushortArray)
