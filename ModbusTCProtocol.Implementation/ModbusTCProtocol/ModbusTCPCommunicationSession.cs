@@ -214,6 +214,46 @@ namespace ModbusTCP.Implementacion.ModbusTCPCommunicationSession
 
         }
 
+        public void ReadValues(List<Node> nodes, out List<DataValue> dataValues)
+        {
+            List<ModbusNode> modbusNodes = new List<ModbusNode>();
+
+            List<DataValue> readValues = new List<DataValue>();
+
+            foreach (Node node in nodes)
+            {
+                modbusNodes.Add((ModbusNode)node);
+            }
+
+            for (int i = 0; i <= modbusNodes.Count; i++)
+            {
+                switch (modbusNodes[i].RegisterType)
+                {
+                    case ModbusRegisterType.Coils:
+                        bool[] coils = ModbusMaster.ReadCoils(SlaveAddress, modbusNodes[i].Start, modbusNodes[i].RegisterAmount);
+                        readValues.Add(new DataValue(coils));
+                        break;
+                    case ModbusRegisterType.InputRegister:
+                        ushort[] inputRegisters = ModbusMaster.ReadInputRegisters(SlaveAddress, modbusNodes[i].Start, modbusNodes[i].RegisterAmount);
+                        readValues.Add(new DataValue(inputRegisters));
+                        break;
+                    case ModbusRegisterType.DiscreteInputs:
+                        bool[] discreteInputs = ModbusMaster.ReadInputs(SlaveAddress, modbusNodes[i].Start, modbusNodes[i].RegisterAmount);
+                        readValues.Add(new DataValue(discreteInputs));
+                        break;
+                    case ModbusRegisterType.HoldingRegister:
+                        ushort[] holdingRegister = ModbusMaster.ReadHoldingRegisters(SlaveAddress, modbusNodes[i].Start, modbusNodes[i].RegisterAmount);
+                        readValues.Add(new DataValue(holdingRegister));
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            dataValues = readValues;
+
+        }
+
         public void WriteValues(List<Node> nodes, List<DataValue> dataValues, out Domain.Core.Concrete.Result results)
         {
             List<ModbusNode> modbusNodes = new List<ModbusNode>();

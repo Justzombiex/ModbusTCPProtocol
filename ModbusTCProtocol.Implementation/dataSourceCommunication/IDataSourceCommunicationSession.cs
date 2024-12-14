@@ -41,7 +41,7 @@ namespace ModbusTCP.Implementacion.dataSourceCommunication
         //TODO: Por definir 
         public void WriteValue(Node node, DataValue dataValue, out Result results);
 
-        public void ReadValues(ModbusMatrixNode modbusMatrixNode, out DataValue dataValue);
+        public void ReadValues(List<Node> nodes, out List<DataValue> dataValues);
 
         //TODO: Por definir 
         public void WriteValues(DataValue dataValue, out Result results);
