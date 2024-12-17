@@ -68,7 +68,7 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
 
                     if (!CompareValues(currentValue.Value, nodeDictionary[nodeDictionary.Keys.ElementAt(i)].DataValue.Value))
                     {
-                        if (MyEvent != null)
+                        if (nodeDictionary[nodeDictionary.Keys.ElementAt(i)].HasEventSubscribers())
                         {
                             nodeDictionary[nodeDictionary.Keys.ElementAt(i)].Callback(null, currentValue);
                         }
@@ -151,6 +151,12 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
             {
                 DataValue = dataValue;
                 Callback = callback;
+            }
+
+            // Método para verificar si el evento tiene suscriptores
+            public bool HasEventSubscribers()
+            {
+                return MyEvent != null;
             }
         }
 
