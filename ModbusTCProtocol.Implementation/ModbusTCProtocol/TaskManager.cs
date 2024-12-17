@@ -17,9 +17,7 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
 
         public byte SlaveAddress { get; }
 
-        private Dictionary<ModbusNode, (DataValue dataValue, valueChanged callback)> nodeDictionary = new Dictionary<ModbusNode, (DataValue dataValue, valueChanged Callback)>();
-
-        public event valueChanged MyEvent;
+        private Dictionary<ModbusNode, ModbusEventHandler> nodeDictionary = new Dictionary<ModbusNode, ModbusEventHandler>();
 
         public TaskManager(IModbusMaster modbusMaster, byte slaveAddress)
         {
@@ -33,9 +31,11 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
         {
             ModbusNode modbusNode = (ModbusNode)node;
 
-            nodeDictionary.Add(modbusNode, (ReadModbusData(modbusNode), callback));
+            ModbusEventHandler handler = new ModbusEventHandler(ReadModbusData(modbusNode), callback);
 
-            MyEvent += callback;
+            handler.MyEvent += callback;
+
+            nodeDictionary.Add(modbusNode, handler);
 
             serverHandle = modbusNode;
 
@@ -43,7 +43,7 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
 
         public void RemoveNodes(Node node)
         {
-            MyEvent -= nodeDictionary[(ModbusNode)node].callback;
+            nodeDictionary[(ModbusNode)node].MyEvent -= nodeDictionary[(ModbusNode)node].Callback;
 
             nodeDictionary.Remove((ModbusNode)node);
         }
@@ -52,7 +52,7 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
         {
             for (int i = 0; i < nodeDictionary.Count; i++)
             {
-                MyEvent -= nodeDictionary[nodeDictionary.Keys.ElementAt(i)].callback;
+                nodeDictionary[nodeDictionary.Keys.ElementAt(i)].MyEvent -= nodeDictionary[nodeDictionary.Keys.ElementAt(i)].Callback;
 
                 nodeDictionary.Remove(nodeDictionary.Keys.ElementAt(i));
             }
@@ -66,11 +66,11 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
                 {
                     DataValue currentValue = ReadModbusData(nodeDictionary.Keys.ElementAt(i));
 
-                    if (!CompareValues(currentValue.Value, nodeDictionary[nodeDictionary.Keys.ElementAt(i)].dataValue.Value))
+                    if (!CompareValues(currentValue.Value, nodeDictionary[nodeDictionary.Keys.ElementAt(i)].DataValue.Value))
                     {
                         if (MyEvent != null)
                         {
-                            nodeDictionary[nodeDictionary.Keys.ElementAt(i)].callback(null, currentValue);
+                            nodeDictionary[nodeDictionary.Keys.ElementAt(i)].Callback(null, currentValue);
                         }
                         else
                         {
@@ -139,6 +139,21 @@ namespace ModbusTCProtocol.Implementation.ModbusTCProtocol
             // Si los objetos no son ni arreglos de bool ni arreglos de ushort, los comparamos directamente
             return objA.Equals(objB);
         }
+
+        private class ModbusEventHandler
+        {
+            public DataValue DataValue { get; set; }
+            public valueChanged Callback { get; set; }
+
+            public event valueChanged MyEvent;
+
+            public ModbusEventHandler(DataValue dataValue, valueChanged callback) 
+            {
+                DataValue = dataValue;
+                Callback = callback;
+            }
+        }
+
         #endregion Helpers
 
     }
